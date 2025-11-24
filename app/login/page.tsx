@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { Suspense } from "react"
 
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -13,7 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { GraduationCap, AlertCircle } from "lucide-react"
 import { login } from "@/lib/auth"
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter()
   const params = useSearchParams()
   const isAdmin = params.get("admin") === "1"
@@ -118,5 +119,13 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   )
 }
