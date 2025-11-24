@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +15,8 @@ import { login } from "@/lib/auth"
 
 export default function LoginPage() {
   const router = useRouter()
+  const params = useSearchParams()
+  const isAdmin = params.get("admin") === "1"
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -33,11 +35,11 @@ export default function LoginPage() {
     }
 
     // Attempt login
-    const user = login(email, password)
+    const user = await login(email, password)
     if (user) {
       router.push("/dashboard")
     } else {
-      setError("Invalid credentials. Try registering first or use any email with any password.")
+      setError("Invalid credentials")
     }
     setLoading(false)
   }
@@ -51,8 +53,17 @@ export default function LoginPage() {
               <GraduationCap className="h-7 w-7 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-[#0a1628]">Welcome Back</CardTitle>
-          <CardDescription>Sign in to access your CSE Innovation Hub account</CardDescription>
+          <CardTitle className="text-2xl font-bold text-[#0a1628]">{isAdmin ? "Admin Login" : "Welcome Back"}</CardTitle>
+          <CardDescription>
+            {isAdmin ? "Sign in with admin credentials" : "Sign in to access your CSE Innovation Hub account"}
+          </CardDescription>
+          <div className="mt-2">
+            {isAdmin ? (
+              <Link href="/login" className="text-sm font-medium text-[#be2e38] hover:underline">Switch to Student Login</Link>
+            ) : (
+              <Link href="/login?admin=1" className="text-sm font-medium text-[#be2e38] hover:underline">Switch to Admin Login</Link>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

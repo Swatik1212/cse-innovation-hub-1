@@ -87,10 +87,10 @@ INSERT INTO events (title, description, event_date, event_time, location, event_
 ('24-Hour Hackathon: Code Sprint 2025', 'Annual coding competition where teams build innovative solutions. Prizes worth $10,000.', '2026-01-10', '9:00 AM - Next Day 9:00 AM', 'Innovation Center', 'Hackathon', 'Upcoming');
 
 -- Added sample data for jobs with requirements
-INSERT INTO jobs (company, position, type, location, salary, description, posted_date) VALUES
-('Google', 'Software Engineering Intern', 'Internship', 'Bangalore, India', '₹80,000/month', 'Join Google''s engineering team to work on cutting-edge projects that impact billions of users worldwide.', '2025-11-15'),
-('Microsoft', 'Full Stack Developer', 'Full-time', 'Hyderabad, India', '₹18-22 LPA', 'Build cloud-based solutions using Azure, React, and .NET technologies.', '2025-11-20'),
-('Amazon', 'SDE - Machine Learning', 'Full-time', 'Bengaluru, India', '₹25-30 LPA', 'Design and implement ML models for recommendation systems and fraud detection at Amazon scale.', '2025-11-10');
+INSERT INTO jobs (title, company, position, type, location, salary, description, posted_date) VALUES
+('Software Engineering Intern', 'Google', 'Software Engineering Intern', 'Internship', 'Bangalore, India', '₹80,000/month', 'Join Google''s engineering team to work on cutting-edge projects that impact billions of users worldwide.', '2025-11-15'),
+('Full Stack Developer', 'Microsoft', 'Full Stack Developer', 'Full-time', 'Hyderabad, India', '₹18-22 LPA', 'Build cloud-based solutions using Azure, React, and .NET technologies.', '2025-11-20'),
+('SDE - Machine Learning', 'Amazon', 'SDE - Machine Learning', 'Full-time', 'Bengaluru, India', '₹25-30 LPA', 'Design and implement ML models for recommendation systems and fraud detection at Amazon scale.', '2025-11-10');
 
 INSERT INTO job_requirements (job_id, requirement) VALUES
 (1, 'Currently pursuing Bachelor''s or Master''s in Computer Science'),

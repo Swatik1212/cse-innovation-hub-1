@@ -62,9 +62,15 @@ export default function RegisterPage() {
       rollNumber: formData.rollNumber,
       department: formData.department,
       year: formData.year,
-    }
+      password: formData.password,
+    } as any
 
-    saveUser(user)
+    const saved = await saveUser(user)
+    if (!saved) {
+      setError("Registration failed")
+      setLoading(false)
+      return
+    }
     setSuccess(true)
 
     setTimeout(() => {

@@ -1,13 +1,41 @@
 "use client"
 
 import type React from "react"
-
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Lightbulb, Rocket, Users, Award, Code, Zap } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 
 export default function InnovationPage() {
+  const [projects, setProjects] = useState<{ id: string; title: string; description: string; status: string; studentName: string }[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState({ title: "", description: "" })
+
+  useEffect(() => {
+    let active = true
+    ;(async () => {
+      try {
+        setLoading(true)
+        const res = await fetch("/api/projects")
+        const data = await res.json()
+        if (!res.ok) throw new Error(data?.error || "Failed to load projects")
+        if (active) setProjects(data)
+      } catch (e: any) {
+        if (active) setError(e.message || "Unexpected error")
+      } finally {
+        if (active) setLoading(false)
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [])
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -22,9 +50,9 @@ export default function InnovationPage() {
               Transform your ideas into reality. The Innovation Hub provides resources, mentorship, and collaboration
               opportunities for students working on cutting-edge projects.
             </p>
-            <Button className="bg-[#be2e38] hover:bg-[#a0252e] h-12 px-8 text-base">
+            <Button className="bg-[#be2e38] hover:bg-[#a0252e] h-12 px-8 text-base" onClick={() => setShowForm((s) => !s)}>
               <Rocket className="mr-2 h-5 w-5" />
-              Submit Your Project
+              {showForm ? "Close" : "Submit Your Project"}
             </Button>
           </div>
         </div>
@@ -68,50 +96,68 @@ export default function InnovationPage() {
           />
         </div>
 
-        <div>
-          <h2 className="text-2xl font-bold text-[#0a1628] mb-4">Featured Student Projects</h2>
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="text-[#0a1628]">AI-Powered Resume Analyzer</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 mb-4">
-                  ML model that analyzes resumes and provides ATS optimization suggestions. Built with Python,
-                  TensorFlow, and React.
-                </p>
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-2">
-                    <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">Machine Learning</span>
-                    <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">React</span>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    View Project
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+        {error && <div className="text-center py-4 text-red-600">{error}</div>}
+        {loading && <div className="text-center py-8">Loading projects…</div>}
 
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="text-[#0a1628]">Campus Navigation AR App</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 mb-4">
-                  Augmented reality mobile app for navigating the campus. Uses ARCore and real-time pathfinding
-                  algorithms.
-                </p>
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-2">
-                    <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700">AR/VR</span>
-                    <span className="text-xs px-2 py-1 rounded-full bg-orange-100 text-orange-700">Mobile</span>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    View Project
-                  </Button>
+        {showForm && (
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Project Title</Label>
+                  <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
                 </div>
-              </CardContent>
-            </Card>
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Description</Label>
+                  <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  className="bg-[#be2e38] hover:bg-[#a0252e]"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch("/api/projects", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ title: form.title, description: form.description }),
+                      })
+                      const data = await res.json()
+                      if (!res.ok) throw new Error(data?.error || "Failed to submit project")
+                      setShowForm(false)
+                      setForm({ title: "", description: "" })
+                      const refreshed = await fetch("/api/projects")
+                      const newList = await refreshed.json()
+                      setProjects(Array.isArray(newList) ? newList : [])
+                    } catch (e: any) {
+                      setError(e.message || "Unexpected error")
+                    }
+                  }}
+                >
+                  Submit Project
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <div>
+          <h2 className="text-2xl font-bold text-[#0a1628] mb-4">Student Projects</h2>
+          <div className="grid gap-6 md:grid-cols-2">
+            {projects.map((p) => (
+              <Card key={p.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle className="text-[#0a1628]">{p.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600 mb-4">{p.description}</p>
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-gray-500">By {p.studentName || "Student"}</div>
+                    <div className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700 capitalize">{p.status}</div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </main>

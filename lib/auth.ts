@@ -8,19 +8,32 @@ export interface User {
   rollNumber: string
   department: string
   year: string
+  role?: "student" | "admin"
 }
 
-export function saveUser(user: User) {
-  if (typeof window !== "undefined") {
-    localStorage.setItem("currentUser", JSON.stringify(user))
-    const users = getUsers()
-    const existingIndex = users.findIndex((u) => u.email === user.email)
-    if (existingIndex >= 0) {
-      users[existingIndex] = user
-    } else {
-      users.push(user)
+export async function saveUser(user: User) {
+  try {
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        full_name: user.name,
+        email: user.email,
+        password: (user as any).password || "changeme",
+        course: user.department,
+        year_of_study: user.year,
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) return null
+    const role = data.role || (user.email === "admin@csehub.com" ? "admin" : "student")
+    const withRole = { ...user, role, id: String(data.id || user.id) }
+    if (typeof window !== "undefined") {
+      localStorage.setItem("currentUser", JSON.stringify(withRole))
     }
-    localStorage.setItem("users", JSON.stringify(users))
+    return withRole
+  } catch {
+    return null
   }
 }
 
@@ -43,15 +56,35 @@ export function getCurrentUser(): User | null {
 export function logout() {
   if (typeof window !== "undefined") {
     localStorage.removeItem("currentUser")
+    document.cookie = "role=; Max-Age=0; path=/"
   }
 }
 
-export function login(email: string, password: string): User | null {
-  const users = getUsers()
-  const user = users.find((u) => u.email === email)
-  if (user) {
-    localStorage.setItem("currentUser", JSON.stringify(user))
+export async function login(email: string, password: string): Promise<User | null> {
+  try {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+      credentials: "include",
+    })
+    const data = await res.json()
+    if (!res.ok) return null
+    const role = data.role || (email.trim().toLowerCase() === "admin@csehub.com" ? "admin" : "student")
+    const user: User = {
+      id: String(data.id || ""),
+      email: email.trim().toLowerCase(),
+      name: data.name || "",
+      rollNumber: "",
+      department: "",
+      year: "",
+      role,
+    }
+    if (typeof window !== "undefined") {
+      localStorage.setItem("currentUser", JSON.stringify(user))
+    }
     return user
+  } catch {
+    return null
   }
-  return null
 }

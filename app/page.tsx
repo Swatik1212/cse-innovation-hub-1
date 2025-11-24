@@ -47,7 +47,15 @@ export default function LandingPage() {
                   variant="outline"
                   className="h-14 px-8 text-lg border-white text-white hover:bg-white hover:text-[#0a1628] rounded-none w-full sm:w-auto bg-transparent"
                 >
-                  Student Login
+                  Login
+                </Button>
+              </Link>
+              <Link href="/login?admin=1">
+                <Button
+                  variant="outline"
+                  className="h-14 px-8 text-lg border-white text-white hover:bg-white hover:text-[#0a1628] rounded-none w-full sm:w-auto bg-transparent"
+                >
+                  Admin Login
                 </Button>
               </Link>
             </div>

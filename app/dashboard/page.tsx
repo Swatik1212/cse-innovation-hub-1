@@ -8,7 +8,6 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Calendar, Briefcase, Award, Lightbulb, LogOut } from "lucide-react"
-import { events, jobs, placementResources } from "@/lib/data"
 import { getCurrentUser, logout } from "@/lib/auth"
 import { Navbar } from "@/components/navbar"
 import type { User as AuthUser } from "@/lib/auth"
@@ -16,6 +15,9 @@ import type { User as AuthUser } from "@/lib/auth"
 export default function DashboardPage() {
   const router = useRouter()
   const [user, setUser] = useState<AuthUser | null>(null)
+  const [events, setEvents] = useState<any[]>([])
+  const [jobs, setJobs] = useState<any[]>([])
+  const [placements, setPlacements] = useState<any[]>([])
 
   useEffect(() => {
     const currentUser = getCurrentUser()
@@ -25,6 +27,32 @@ export default function DashboardPage() {
       setUser(currentUser)
     }
   }, [router])
+
+  useEffect(() => {
+    let active = true
+    ;(async () => {
+      try {
+        const [eRes, jRes, pRes] = await Promise.all([
+          fetch("/api/events"),
+          fetch("/api/jobs"),
+          fetch("/api/placements"),
+        ])
+        const [eData, jData, pData] = await Promise.all([
+          eRes.json(),
+          jRes.json(),
+          pRes.json(),
+        ])
+        if (active) {
+          setEvents(Array.isArray(eData) ? eData : [])
+          setJobs(Array.isArray(jData) ? jData : [])
+          setPlacements(Array.isArray(pData) ? pData : [])
+        }
+      } catch {}
+    })()
+    return () => {
+      active = false
+    }
+  }, [])
 
   const handleLogout = () => {
     logout()
@@ -79,7 +107,7 @@ export default function DashboardPage() {
           />
           <StatsCard
             title="Placement Resources"
-            count={placementResources.length}
+            count={placements.length}
             icon={<Award className="h-6 w-6" />}
             href="/placements"
             color="red"
@@ -102,16 +130,16 @@ export default function DashboardPage() {
               </Link>
             </CardHeader>
             <CardContent className="space-y-4">
-              {events.slice(0, 3).map((event) => (
+              {events.slice(0, 3).map((event: any) => (
                 <div
                   key={event.id}
                   className="flex gap-4 p-4 rounded-lg border hover:border-[#be2e38] transition-colors"
                 >
                   <div className="flex flex-col items-center justify-center bg-[#be2e38] text-white rounded-lg p-3 min-w-[70px]">
                     <span className="text-xs font-bold uppercase">
-                      {new Date(event.date).toLocaleDateString("en", { month: "short" })}
+                      {new Date(event.event_date || event.date).toLocaleDateString("en", { month: "short" })}
                     </span>
-                    <span className="text-2xl font-bold">{new Date(event.date).getDate()}</span>
+                    <span className="text-2xl font-bold">{new Date(event.event_date || event.date).getDate()}</span>
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold text-[#0a1628] mb-1">{event.title}</h3>
@@ -131,7 +159,7 @@ export default function DashboardPage() {
               </Link>
             </CardHeader>
             <CardContent className="space-y-4">
-              {jobs.slice(0, 3).map((job) => (
+              {jobs.slice(0, 3).map((job: any) => (
                 <div
                   key={job.id}
                   className="flex items-start justify-between p-4 rounded-lg border hover:border-[#be2e38] transition-colors"

@@ -3,10 +3,17 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { GraduationCap, Menu, X } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { getCurrentUser, logout } from "@/lib/auth"
+import type { User as AuthUser } from "@/lib/auth"
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const [user, setUser] = useState<AuthUser | null>(null)
+
+  useEffect(() => {
+    setUser(getCurrentUser())
+  }, [])
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#0a1628] text-white">
@@ -37,18 +44,47 @@ export function Navbar() {
             <Link href="/innovation" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
               Innovation
             </Link>
+            {user?.role === "admin" && (
+              <Link href="/settings" className="text-sm font-medium text-[#be2e38] hover:text-white transition-colors">
+                Settings
+              </Link>
+            )}
           </div>
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center gap-4">
-            <Link href="/login">
-              <Button variant="ghost" className="text-white hover:text-white hover:bg-white/10">
-                Log In
-              </Button>
-            </Link>
-            <Link href="/register">
-              <Button className="bg-[#be2e38] hover:bg-[#a0252e] text-white rounded-none px-6">Get Started</Button>
-            </Link>
+            {user ? (
+              <>
+                {user.role === "admin" && (
+                  <span className="text-xs px-2 py-1 rounded-full bg-red-500/20 text-red-300 border border-red-500/30">Admin</span>
+                )}
+                <Link href="/dashboard">
+                  <Button variant="ghost" className="text-white hover:text-white hover:bg-white/10">Dashboard</Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  className="border-white text-white hover:bg-white hover:text-[#0a1628]"
+                  onClick={() => {
+                    logout()
+                    if (typeof window !== "undefined") window.location.href = "/"
+                  }}
+                >
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link href="/login">
+                  <Button variant="ghost" className="text-white hover:text-white hover:bg-white/10">Log In</Button>
+                </Link>
+                <Link href="/login?admin=1">
+                  <Button variant="ghost" className="text-white hover:text-white hover:bg-white/10">Admin Login</Button>
+                </Link>
+                <Link href="/register">
+                  <Button className="bg-[#be2e38] hover:bg-[#a0252e] text-white rounded-none px-6">Get Started</Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -74,15 +110,44 @@ export function Navbar() {
             <Link href="/innovation" className="text-sm font-medium text-gray-300">
               Innovation
             </Link>
+            {user?.role === "admin" && (
+              <Link href="/settings" className="text-sm font-medium text-[#be2e38]">
+                Settings
+              </Link>
+            )}
             <div className="pt-4 flex flex-col gap-2">
-              <Link href="/login">
-                <Button variant="ghost" className="w-full justify-start text-white">
-                  Log In
-                </Button>
-              </Link>
-              <Link href="/register">
-                <Button className="w-full bg-[#be2e38] hover:bg-[#a0252e]">Get Started</Button>
-              </Link>
+              {user ? (
+                <>
+                  {user.role === "admin" && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-red-500/20 text-red-300 border border-red-500/30 w-min">Admin</span>
+                  )}
+                  <Link href="/dashboard">
+                    <Button variant="ghost" className="w-full justify-start text-white">Dashboard</Button>
+                  </Link>
+                  <Button
+                    className="w-full border-white text-white hover:bg-white hover:text-[#0a1628]"
+                    variant="outline"
+                    onClick={() => {
+                      logout()
+                      if (typeof window !== "undefined") window.location.href = "/"
+                    }}
+                  >
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login">
+                    <Button variant="ghost" className="w-full justify-start text-white">Log In</Button>
+                  </Link>
+                  <Link href="/login?admin=1">
+                    <Button variant="ghost" className="w-full justify-start text-white">Admin Login</Button>
+                  </Link>
+                  <Link href="/register">
+                    <Button className="w-full bg-[#be2e38] hover:bg-[#a0252e]">Get Started</Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
