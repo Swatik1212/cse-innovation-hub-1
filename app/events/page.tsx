@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext } from "@/components/ui/pagination"
 import { Calendar, MapPin, Clock, Tag } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 
@@ -26,7 +27,12 @@ export default function EventsPage() {
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>("")
   const [tab, setTab] = useState<string>("all")
+  const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [page, setPage] = useState<number>(1)
+  const [total, setTotal] = useState<number>(0)
+  const limit = 10
   const [showForm, setShowForm] = useState<boolean>(false)
+  const [search, setSearch] = useState<string>("")
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -41,10 +47,18 @@ export default function EventsPage() {
     ;(async () => {
       try {
         setLoading(true)
-        const res = await fetch("/api/events")
+        const q1 = tab === "all" ? [] : ["event_type=" + encodeURIComponent(tab)]
+        const q2 = ["page=" + page, "limit=" + limit]
+        const q3 = search.trim() ? ["q=" + encodeURIComponent(search.trim())] : []
+        const qs = (q1.concat(q2).concat(q3).length ? "?" + q1.concat(q2).concat(q3).join("&") : "")
+        const res = await fetch(`/api/events${qs}`)
         const data = await res.json()
         if (!res.ok) throw new Error(data?.error || "Failed to load events")
-        if (active) setEvents(data)
+        const totalHeader = res.headers.get("X-Total-Count")
+        if (active) {
+          setEvents(data)
+          setTotal(totalHeader ? Number(totalHeader) : data.length)
+        }
       } catch (e: any) {
         if (active) setError(e.message || "Unexpected error")
       } finally {
@@ -54,9 +68,9 @@ export default function EventsPage() {
     return () => {
       active = false
     }
-  }, [])
+  }, [tab, page, search])
 
-  const filtered = events.filter((e) => (tab === "all" ? true : e.event_type === tab))
+  const filtered = events
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -153,7 +167,19 @@ export default function EventsPage() {
           </Card>
         )}
 
-        <Tabs value={tab} onValueChange={setTab} className="space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="w-full md:w-1/2">
+            <Input placeholder="Search events (title, description, location)" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} />
+          </div>
+        </div>
+        <Tabs
+          value={tab}
+          onValueChange={(v) => {
+            setTab(v)
+            setPage(1)
+          }}
+          className="space-y-4"
+        >
           <TabsList>
             <TabsTrigger value="all">All</TabsTrigger>
             <TabsTrigger value="Workshop">Workshops</TabsTrigger>
@@ -197,10 +223,24 @@ export default function EventsPage() {
                           </span>
                         )}
                       </div>
+
+                      {expandedId === e.id && (
+                        <div className="border-t pt-4 mt-4 space-y-2">
+                          <div className="text-sm text-gray-600">Status: <span className="font-medium">{e.status}</span></div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex md:flex-col gap-2">
-                      <Button className="bg-[#be2e38] hover:bg-[#a0252e] whitespace-nowrap">Details</Button>
+                      <Button
+                        className="bg-[#be2e38] hover:bg-[#a0252e] whitespace-nowrap"
+                        onClick={() => setExpandedId(expandedId === e.id ? null : e.id)}
+                      >
+                        Details
+                      </Button>
+                      <a href={toGoogleCalendarLink(e)} target="_blank" rel="noopener noreferrer">
+                        <Button variant="outline" className="whitespace-nowrap">Add to Calendar</Button>
+                      </a>
                     </div>
                   </div>
                 </CardContent>
@@ -208,7 +248,55 @@ export default function EventsPage() {
             ))}
           </TabsContent>
         </Tabs>
+        {filtered.length === 0 && !loading && !error && (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-lg">No events found in this category.</p>
+          </div>
+        )}
+        <div className="flex justify-end">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  aria-disabled={page <= 1}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <span className="px-3 py-2 text-sm">Page {page} of {Math.max(1, Math.ceil(total / limit))}</span>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => setPage((p) => (p < Math.ceil(total / limit) ? p + 1 : p))}
+                  aria-disabled={page >= Math.ceil(total / limit)}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
       </main>
     </div>
   )
 }
+  function toGoogleCalendarLink(e: EventItem) {
+    try {
+      const datePart = e.event_date
+      const timePart = e.event_time || "09:00"
+      const start = new Date(`${datePart}T${timePart}:00`)
+      const end = new Date(start.getTime() + 60 * 60 * 1000)
+      const pad = (n: number) => String(n).padStart(2, "0")
+      const fmt = (d: Date) =>
+        `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`
+      const dates = `${fmt(start)}/${fmt(end)}`
+      const params = new URLSearchParams({
+        action: "TEMPLATE",
+        text: e.title,
+        dates,
+        details: e.description || "",
+        location: e.location || "",
+      })
+      return `https://www.google.com/calendar/render?${params.toString()}`
+    } catch {
+      return `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(e.title)}`
+    }
+  }

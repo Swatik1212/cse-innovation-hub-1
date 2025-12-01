@@ -18,9 +18,11 @@ interface Job {
   description: string
   requirements: string[]
   postedDate: string
+  applyLink?: string
 }
 import { Navbar } from "@/components/navbar"
 import { getCurrentUser } from "@/lib/auth"
+import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext } from "@/components/ui/pagination"
 
 export default function JobsPage() {
   const [expandedJob, setExpandedJob] = useState<string | null>(null)
@@ -28,7 +30,12 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>("")
+  const [page, setPage] = useState<number>(1)
+  const [total, setTotal] = useState<number>(0)
+  const limit = 10
+  const [clicks, setClicks] = useState<Record<number, number>>({})
   const [showForm, setShowForm] = useState<boolean>(false)
+  const [query, setQuery] = useState<string>("")
   const [form, setForm] = useState({
     company: "",
     position: "",
@@ -37,6 +44,7 @@ export default function JobsPage() {
     salary: "",
     description: "",
     posted_date: "",
+    apply_link: "",
     requirementsText: "",
   })
 
@@ -45,10 +53,18 @@ export default function JobsPage() {
     ;(async () => {
       try {
         setLoading(true)
-        const res = await fetch("/api/jobs")
+        const q1 = filter === "all" ? [] : ["type=" + encodeURIComponent(filter)]
+        const q2 = ["page=" + page, "limit=" + limit]
+        const q3 = query.trim() ? ["q=" + encodeURIComponent(query.trim())] : []
+        const qs = (q1.concat(q2).concat(q3).length ? "?" + q1.concat(q2).concat(q3).join("&") : "")
+        const res = await fetch(`/api/jobs${qs}`)
         const data = await res.json()
         if (!res.ok) throw new Error(data?.error || "Failed to load jobs")
-        if (active) setJobs(data)
+        const totalHeader = res.headers.get("X-Total-Count")
+        if (active) {
+          setJobs(data)
+          setTotal(totalHeader ? Number(totalHeader) : data.length)
+        }
       } catch (e: any) {
         if (active) setError(e.message || "Unexpected error")
       } finally {
@@ -58,9 +74,36 @@ export default function JobsPage() {
     return () => {
       active = false
     }
+  }, [filter, page, query])
+
+  useEffect(() => {
+    let active = true
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/jobs/clicks?limit=100`)
+        const data = await res.json()
+        if (!res.ok) throw new Error(data?.error || "Failed to load clicks")
+        if (active) {
+          const map: Record<number, number> = {}
+          for (const row of data) map[row.job_id] = Number(row.clicks)
+          setClicks(map)
+        }
+      } catch {}
+    })()
+    return () => {
+      active = false
+    }
   }, [])
 
-  const filteredJobs = filter === "all" ? jobs : jobs.filter((j) => j.type === filter)
+  const filteredJobs = (filter === "all" ? jobs : jobs.filter((j) => j.type === filter)).filter((j) => {
+    const q = query.trim().toLowerCase()
+    if (!q) return true
+    return (
+      j.company.toLowerCase().includes(q) ||
+      j.position.toLowerCase().includes(q) ||
+      j.description.toLowerCase().includes(q)
+    )
+  })
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -114,6 +157,10 @@ export default function JobsPage() {
                   <Input value={form.salary} onChange={(e) => setForm({ ...form, salary: e.target.value })} />
                 </div>
                 <div className="space-y-2">
+                  <Label>Apply Link</Label>
+                  <Input value={form.apply_link} onChange={(e) => setForm({ ...form, apply_link: e.target.value })} />
+                </div>
+                <div className="space-y-2">
                   <Label>Posted Date</Label>
                   <Input type="date" value={form.posted_date} onChange={(e) => setForm({ ...form, posted_date: e.target.value })} />
                 </div>
@@ -146,6 +193,7 @@ export default function JobsPage() {
                           salary: form.salary,
                           description: form.description,
                           posted_date: form.posted_date,
+                          apply_link: form.apply_link,
                           requirements,
                         }),
                       })
@@ -160,6 +208,7 @@ export default function JobsPage() {
                         salary: "",
                         description: "",
                         posted_date: "",
+                        apply_link: "",
                         requirementsText: "",
                       })
                       const refreshed = await fetch("/api/jobs")
@@ -176,6 +225,13 @@ export default function JobsPage() {
             </CardContent>
           </Card>
         )}
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="Search jobs (company, position, description)"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
         <div className="flex gap-2">
           <Button
             variant={filter === "all" ? "default" : "outline"}
@@ -249,7 +305,15 @@ export default function JobsPage() {
                     </div>
 
                     <div className="flex md:flex-col gap-2">
-                      <Button className="bg-[#be2e38] hover:bg-[#a0252e] whitespace-nowrap">Apply Now</Button>
+                      <Button
+                        className="bg-[#be2e38] hover:bg-[#a0252e] whitespace-nowrap"
+                        disabled={!job.applyLink}
+                        onClick={() => {
+                          window.open(`/api/jobs/${job.id}/apply`, "_blank")
+                        }}
+                      >
+                        Apply Now
+                      </Button>
                       <Button
                         variant="outline"
                         onClick={() => setExpandedJob(isExpanded ? null : job.id)}
@@ -267,12 +331,64 @@ export default function JobsPage() {
                           </>
                         )}
                       </Button>
+                      {getCurrentUser()?.role === "admin" && (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            placeholder="Update apply link"
+                            value={job.applyLink || ""}
+                            onChange={(e) => {
+                              setJobs((list) => list.map((j) => (j.id === job.id ? { ...j, applyLink: e.target.value } : j)))
+                            }}
+                          />
+                          <Button
+                            variant="outline"
+                            onClick={async () => {
+                              try {
+                                const res = await fetch(`/api/jobs/${job.id}`, {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ apply_link: job.applyLink }),
+                                })
+                                const data = await res.json()
+                                if (!res.ok) throw new Error(data?.error || "Failed to update link")
+                              } catch (e: any) {
+                                setError(e.message || "Unexpected error")
+                              }
+                            }}
+                          >
+                            Save Link
+                          </Button>
+                          <span className="text-sm text-gray-600">Clicks: {clicks[job.id] || 0}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
               </Card>
             )
           })}
+        </div>
+
+        <div className="flex justify-end">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  aria-disabled={page <= 1}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <span className="px-3 py-2 text-sm">Page {page} of {Math.max(1, Math.ceil(total / limit))}</span>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => setPage((p) => (p < Math.ceil(total / limit) ? p + 1 : p))}
+                  aria-disabled={page >= Math.ceil(total / limit)}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
 
         {filteredJobs.length === 0 && (

@@ -74,10 +74,10 @@ export function Navbar() {
               </>
             ) : (
               <>
-                <Link href="/login">
+                <Link href="/login" prefetch={false}>
                   <Button variant="ghost" className="text-white hover:text-white hover:bg-white/10">Log In</Button>
                 </Link>
-                <Link href="/login?admin=1">
+                <Link href="/login?admin=1" prefetch={false}>
                   <Button variant="ghost" className="text-white hover:text-white hover:bg-white/10">Admin Login</Button>
                 </Link>
                 <Link href="/register">
@@ -137,10 +137,10 @@ export function Navbar() {
                 </>
               ) : (
                 <>
-                  <Link href="/login">
+                  <Link href="/login" prefetch={false}>
                     <Button variant="ghost" className="w-full justify-start text-white">Log In</Button>
                   </Link>
-                  <Link href="/login?admin=1">
+                  <Link href="/login?admin=1" prefetch={false}>
                     <Button variant="ghost" className="w-full justify-start text-white">Admin Login</Button>
                   </Link>
                   <Link href="/register">

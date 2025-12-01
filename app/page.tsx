@@ -42,7 +42,7 @@ export default function LandingPage() {
                   Join the Hub
                 </Button>
               </Link>
-              <Link href="/login">
+              <Link href="/login" prefetch={false}>
                 <Button
                   variant="outline"
                   className="h-14 px-8 text-lg border-white text-white hover:bg-white hover:text-[#0a1628] rounded-none w-full sm:w-auto bg-transparent"
@@ -50,7 +50,7 @@ export default function LandingPage() {
                   Login
                 </Button>
               </Link>
-              <Link href="/login?admin=1">
+              <Link href="/login?admin=1" prefetch={false}>
                 <Button
                   variant="outline"
                   className="h-14 px-8 text-lg border-white text-white hover:bg-white hover:text-[#0a1628] rounded-none w-full sm:w-auto bg-transparent"

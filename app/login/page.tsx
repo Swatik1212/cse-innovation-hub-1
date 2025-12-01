@@ -38,7 +38,9 @@ function LoginContent() {
     // Attempt login
     const user = await login(email, password)
     if (user) {
-      router.push("/dashboard")
+      if (typeof window !== "undefined") {
+        window.location.href = "/dashboard"
+      }
     } else {
       setError("Invalid credentials")
     }
@@ -60,9 +62,9 @@ function LoginContent() {
           </CardDescription>
           <div className="mt-2">
             {isAdmin ? (
-              <Link href="/login" className="text-sm font-medium text-[#be2e38] hover:underline">Switch to Student Login</Link>
+              <Link href="/login" prefetch={false} className="text-sm font-medium text-[#be2e38] hover:underline">Switch to Student Login</Link>
             ) : (
-              <Link href="/login?admin=1" className="text-sm font-medium text-[#be2e38] hover:underline">Switch to Admin Login</Link>
+              <Link href="/login?admin=1" prefetch={false} className="text-sm font-medium text-[#be2e38] hover:underline">Switch to Admin Login</Link>
             )}
           </div>
         </CardHeader>

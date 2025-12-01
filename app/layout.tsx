@@ -44,8 +44,8 @@ export default function RootLayout({
           <div className="container mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
             <span className="text-sm text-gray-600">© {new Date().getFullYear()} CSE Innovation Hub</span>
             <div className="flex items-center gap-4">
-              <Link href="/login" className="text-sm text-gray-700 hover:text-[#be2e38]">Student Login</Link>
-              <Link href="/login?admin=1" className="text-sm text-gray-700 hover:text-[#be2e38]">Admin Login</Link>
+              <Link href="/login" prefetch={false} className="text-sm text-gray-700 hover:text-[#be2e38]">Student Login</Link>
+              <Link href="/login?admin=1" prefetch={false} className="text-sm text-gray-700 hover:text-[#be2e38]">Admin Login</Link>
             </div>
           </div>
         </footer>
